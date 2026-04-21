@@ -35,6 +35,35 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+}
+
+/* Safe area for bottom nav (iPhone notch/home indicator) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile tap highlight removal */
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on nav items (app-like feel) */
+nav a, nav button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Input zoom prevention on iOS (16px min) */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+@media (min-width: 1024px) {
+  input, select, textarea {
+    font-size: 14px !important;
+  }
 }
 
 /* Scrollbar */

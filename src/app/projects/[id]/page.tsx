@@ -132,10 +132,10 @@ export default function ProjectDetailPage({
         Back to Dashboard
       </Link>
 
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{project.title}</h1>
-          <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{project.title}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:mt-2 sm:gap-3 sm:text-sm">
             {project.duration && (
               <span>Duration: {formatDuration(project.duration)}</span>
             )}
@@ -149,7 +149,7 @@ export default function ProjectDetailPage({
         {project.status === "completed" && (
           <a
             href={`/api/download/${project.id}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto"
           >
             <Download className="h-4 w-4" />
             Download Video
@@ -158,8 +158,8 @@ export default function ProjectDetailPage({
       </div>
 
       {/* Pipeline Status */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Processing Pipeline</h2>
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 sm:p-6 lg:mb-8">
+        <h2 className="mb-3 text-base font-semibold sm:mb-4 sm:text-lg">Processing Pipeline</h2>
 
         {project.status === "failed" ? (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
@@ -174,7 +174,7 @@ export default function ProjectDetailPage({
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {pipelineSteps.map((step, i) => {
               const stepIdx = stepOrder.indexOf(step.key);
               const isComplete = currentStepIndex > stepIdx;
@@ -185,7 +185,7 @@ export default function ProjectDetailPage({
                 <div key={step.key} className="flex items-center gap-2">
                   <div
                     className={cn(
-                      "flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+                      "flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-medium transition-all sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs",
                       isComplete
                         ? "bg-success/10 text-success"
                         : isCurrent
@@ -205,7 +205,7 @@ export default function ProjectDetailPage({
                   {i < pipelineSteps.length - 1 && (
                     <div
                       className={cn(
-                        "h-0.5 w-4",
+                        "hidden h-0.5 w-3 sm:block sm:w-4",
                         isComplete ? "bg-success/50" : "bg-border"
                       )}
                     />

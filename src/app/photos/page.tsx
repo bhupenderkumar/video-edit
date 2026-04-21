@@ -22,7 +22,7 @@ const enhancementTypes = [
 type EnhancedResult = {
   id: string;
   original: { width: number; height: number };
-  enhanced: { width: number; height: number; path: string };
+  enhanced: { width: number; height: number; path: string; dataUrl?: string };
   enhancement_type: string;
 };
 
@@ -89,9 +89,9 @@ export default function PhotosPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Photo Enhancement</h1>
-        <p className="mt-1 text-muted-foreground">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Photo Enhancement</h1>
+        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
           Upscale, sharpen, and color-correct your business photos.
         </p>
       </div>
@@ -160,7 +160,7 @@ export default function PhotosPage() {
                   <label className="mb-3 block text-sm font-medium">
                     Enhancement Type
                   </label>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                     {enhancementTypes.map((t) => (
                       <button
                         key={t.id}
@@ -231,7 +231,7 @@ export default function PhotosPage() {
                   Enhanced ({result.enhanced.width}×{result.enhanced.height})
                 </p>
                 <img
-                  src={result.enhanced.path}
+                  src={result.enhanced.dataUrl || result.enhanced.path}
                   alt="Enhanced"
                   className="w-full rounded-lg object-contain"
                 />
@@ -240,8 +240,8 @@ export default function PhotosPage() {
 
             <div className="flex gap-3">
               <a
-                href={result.enhanced.path}
-                download
+                href={result.enhanced.dataUrl || result.enhanced.path}
+                download={`enhanced_${result.id}.jpg`}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <Download className="h-4 w-4" />

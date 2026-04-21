@@ -138,14 +138,14 @@ export default function UploadPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Upload Video</h1>
-        <p className="mt-1 text-muted-foreground">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Upload Video</h1>
+        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
           Upload your raw footage and AI will create a polished edit.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5 lg:gap-8">
         {/* Left: Upload & Settings */}
         <div className="space-y-6 lg:col-span-3">
           {/* Drop Zone */}
@@ -158,7 +158,7 @@ export default function UploadPage() {
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
             className={cn(
-              "relative cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition-all",
+              "relative cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-all sm:p-12",
               dragOver
                 ? "border-primary bg-primary/5"
                 : file
@@ -227,7 +227,7 @@ export default function UploadPage() {
             <label className="mb-3 block text-sm font-medium">
               Target Platform
             </label>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
               {platforms.map((p) => (
                 <button
                   key={p.id}
@@ -236,7 +236,7 @@ export default function UploadPage() {
                     setDuration(p.duration);
                   }}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-all",
+                    "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all sm:gap-3 sm:px-4 sm:py-3",
                     platform === p.id
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border hover:border-primary/30"

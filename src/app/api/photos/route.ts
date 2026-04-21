@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
 
     const outputMeta = await sharp(outputPath).metadata();
 
+    // On Vercel, /tmp is ephemeral — include base64 data so the client can download directly
+    const outputBuffer = await import("fs/promises").then(f => f.readFile(outputPath));
+    const base64 = outputBuffer.toString("base64");
+
     return NextResponse.json({
       id: jobId,
       status: "completed",
@@ -91,6 +95,7 @@ export async function POST(request: NextRequest) {
         width: outputMeta.width,
         height: outputMeta.height,
         path: `/api/photos/${jobId}`,
+        dataUrl: `data:image/jpeg;base64,${base64}`,
       },
       enhancement_type: enhancementType,
     });

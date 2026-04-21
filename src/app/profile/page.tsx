@@ -103,10 +103,10 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Brand Profile</h1>
-        <p className="mt-1 text-muted-foreground">
-          Tell AI about your business so it creates edits that match your brand.
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Brand Profile</h1>
+        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+          Tell AI about your business so edits match your brand.
         </p>
       </div>
 
@@ -212,7 +212,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
             {tones.map((tone) => (
               <button
                 key={tone.id}

@@ -96,30 +96,30 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">
-          Upload raw video and let AI create polished content for your business.
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+          Upload raw video and let AI create polished content.
         </p>
       </div>
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-3 gap-3 lg:mb-8 lg:gap-4">
         {[
           {
-            label: "Total Projects",
+            label: "Total",
             value: totalCount,
             icon: Film,
             color: "text-foreground",
           },
           {
-            label: "Processing",
+            label: "Active",
             value: activeCount,
             icon: Loader2,
             color: "text-warning",
           },
           {
-            label: "Completed",
+            label: "Done",
             value: completedCount,
             icon: CheckCircle2,
             color: "text-success",
@@ -127,19 +127,19 @@ export default function DashboardPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-border bg-card p-5"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5"
           >
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-              <stat.icon className={cn("h-5 w-5", stat.color)} />
+              <p className="text-xs text-muted-foreground sm:text-sm">{stat.label}</p>
+              <stat.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", stat.color)} />
             </div>
-            <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+            <p className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl">{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-8 lg:gap-4">
         <Link
           href="/upload"
           className="group flex items-center gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
@@ -175,7 +175,7 @@ export default function DashboardPage() {
 
       {/* Projects List */}
       <div>
-        <h2 className="mb-4 text-xl font-semibold">Recent Projects</h2>
+        <h2 className="mb-3 text-lg font-semibold sm:mb-4 sm:text-xl">Recent Projects</h2>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -216,31 +216,25 @@ export default function DashboardPage() {
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:bg-card/80"
+                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/30 hover:bg-card/80 sm:gap-4 sm:p-4"
                 >
                   {/* Thumbnail placeholder */}
-                  <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-secondary">
-                    <Film className="h-6 w-6 text-muted-foreground" />
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary sm:h-14 sm:w-20">
+                    <Film className="h-5 w-5 text-muted-foreground sm:h-6 sm:w-6" />
                   </div>
 
                   {/* Info */}
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-medium">{project.title}</h3>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                    <h3 className="truncate text-sm font-medium sm:text-base">{project.title}</h3>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[11px] text-muted-foreground sm:mt-1 sm:gap-x-3 sm:text-xs">
                       <span>
                         {platformLabels[project.target_platform] ||
                           project.target_platform}
                       </span>
-                      {project.duration && (
-                        <>
-                          <span>•</span>
-                          <span>{formatDuration(project.duration)}</span>
-                        </>
-                      )}
                       {project.file_size && (
                         <>
-                          <span>•</span>
-                          <span>{formatFileSize(project.file_size)}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:inline">{formatFileSize(project.file_size)}</span>
                         </>
                       )}
                       <span>•</span>
