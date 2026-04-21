@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export async function GET() {
   try {
-    const projects = db.listProjects();
+    const projects = await db.listProjects();
     return NextResponse.json({ projects });
   } catch (err) {
     console.error("Projects fetch error:", err);
@@ -23,7 +23,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    db.deleteProject(id);
+    await db.deleteProject(id);
     return NextResponse.json({ message: "Project deleted" });
   } catch (err) {
     console.error("Delete error:", err);

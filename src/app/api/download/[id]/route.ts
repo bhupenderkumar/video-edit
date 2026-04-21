@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const project = db.getProject(id);
+    const project = await db.getProject(id);
 
     if (!project || !project.output_path) {
       return NextResponse.json(

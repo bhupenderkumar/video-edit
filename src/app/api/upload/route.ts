@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     await writeFile(filePath, Buffer.from(bytes));
 
-    db.createProject({
+    await db.createProject({
       id: projectId,
       profile_id: profileId,
       title,
