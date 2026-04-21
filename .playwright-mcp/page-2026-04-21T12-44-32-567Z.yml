@@ -1,0 +1,106 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - img [ref=e5]
+      - heading "ClipAI" [level=1] [ref=e8]
+    - main [ref=e9]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - heading "Upload Video" [level=1] [ref=e13]
+          - paragraph [ref=e14]: Upload your raw footage and AI will create a polished edit.
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e18] [cursor=pointer]:
+              - img [ref=e19]
+              - paragraph [ref=e22]: Drop your video here
+              - paragraph [ref=e23]: or click to browse • MP4, MOV, AVI, WebM • Up to 500MB
+            - generic [ref=e24]:
+              - generic [ref=e25]: Project Title
+              - textbox "My awesome video" [ref=e26]
+            - generic [ref=e27]:
+              - generic [ref=e28]: Target Platform
+              - generic [ref=e29]:
+                - button "Instagram Reels 9:16 • ~30s" [ref=e30]:
+                  - img [ref=e31]
+                  - generic [ref=e33]:
+                    - paragraph [ref=e34]: Instagram Reels
+                    - paragraph [ref=e35]: 9:16 • ~30s
+                - button "YouTube Shorts 9:16 • ~60s" [ref=e36]:
+                  - img [ref=e37]
+                  - generic [ref=e42]:
+                    - paragraph [ref=e43]: YouTube Shorts
+                    - paragraph [ref=e44]: 9:16 • ~60s
+                - button "YouTube 16:9 • ~120s" [ref=e45]:
+                  - img [ref=e46]
+                  - generic [ref=e48]:
+                    - paragraph [ref=e49]: YouTube
+                    - paragraph [ref=e50]: 16:9 • ~120s
+                - button "TikTok 9:16 • ~30s" [ref=e51]:
+                  - img [ref=e52]
+                  - generic [ref=e54]:
+                    - paragraph [ref=e55]: TikTok
+                    - paragraph [ref=e56]: 9:16 • ~30s
+                - button "X / Twitter 16:9 • ~60s" [ref=e57]:
+                  - img [ref=e58]
+                  - generic [ref=e60]:
+                    - paragraph [ref=e61]: X / Twitter
+                    - paragraph [ref=e62]: 16:9 • ~60s
+            - generic [ref=e63]:
+              - generic [ref=e64]:
+                - text: "Target Duration:"
+                - generic [ref=e65]: 30s
+              - slider [ref=e66]: "30"
+              - generic [ref=e67]:
+                - generic [ref=e68]: 10s
+                - generic [ref=e69]: 60s
+                - generic [ref=e70]: 120s
+                - generic [ref=e71]: 180s
+            - button "Upload & Auto-Edit" [disabled] [ref=e72]:
+              - generic [ref=e73]:
+                - img [ref=e74]
+                - text: Upload & Auto-Edit
+          - generic [ref=e78]:
+            - heading "How It Works" [level=3] [ref=e79]
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - generic [ref=e82]: "1"
+                - generic [ref=e83]:
+                  - paragraph [ref=e84]: Upload
+                  - paragraph [ref=e85]: Drop your raw footage — any length, any quality
+              - generic [ref=e86]:
+                - generic [ref=e87]: "2"
+                - generic [ref=e88]:
+                  - paragraph [ref=e89]: AI Analyzes
+                  - paragraph [ref=e90]: Transcribes speech, analyzes scenes, understands context
+              - generic [ref=e91]:
+                - generic [ref=e92]: "3"
+                - generic [ref=e93]:
+                  - paragraph [ref=e94]: Smart Edit
+                  - paragraph [ref=e95]: AI picks the best moments, adds transitions & captions
+              - generic [ref=e96]:
+                - generic [ref=e97]: "4"
+                - generic [ref=e98]:
+                  - paragraph [ref=e99]: Download
+                  - paragraph [ref=e100]: Get your polished video ready for social media
+            - generic [ref=e101]:
+              - paragraph [ref=e102]: "Selected: Instagram Reels"
+              - paragraph [ref=e103]: 9:16 aspect ratio • ~30s target duration
+    - navigation [ref=e104]:
+      - generic [ref=e105]:
+        - link "Home" [ref=e106] [cursor=pointer]:
+          - /url: /
+          - img [ref=e107]
+          - generic [ref=e112]: Home
+        - link "Upload" [ref=e113] [cursor=pointer]:
+          - /url: /upload
+          - img [ref=e114]
+          - generic [ref=e117]: Upload
+        - link "Photos" [ref=e118] [cursor=pointer]:
+          - /url: /photos
+          - img [ref=e119]
+          - generic [ref=e123]: Photos
+        - link "Brand" [ref=e124] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e125]
+          - generic [ref=e128]: Brand
+  - alert [ref=e129]

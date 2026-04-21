@@ -1,0 +1,68 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e9]:
+          - heading "ClipAI" [level=1] [ref=e10]
+          - paragraph [ref=e11]: AI Video Editor
+      - navigation [ref=e12]:
+        - link "Home" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - text: Home
+        - link "Upload" [ref=e19] [cursor=pointer]:
+          - /url: /upload
+          - img [ref=e20]
+          - text: Upload
+        - link "Photos" [ref=e23] [cursor=pointer]:
+          - /url: /photos
+          - img [ref=e24]
+          - text: Photos
+        - link "Brand" [ref=e28] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e29]
+          - text: Brand
+      - generic [ref=e33]:
+        - paragraph [ref=e34]: AI Powered
+        - paragraph [ref=e35]: Groq LLM • Smart Editing
+    - main [ref=e36]:
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - heading "Dashboard" [level=1] [ref=e40]
+          - paragraph [ref=e41]: Upload raw video and let AI create polished content.
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - paragraph [ref=e45]: Total
+              - img [ref=e46]
+            - paragraph [ref=e48]: "0"
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - paragraph [ref=e51]: Active
+              - img [ref=e52]
+            - paragraph [ref=e54]: "0"
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - paragraph [ref=e57]: Done
+              - img [ref=e58]
+            - paragraph [ref=e61]: "0"
+        - generic [ref=e62]:
+          - link "Upload Video Drop your raw footage and let AI edit it" [ref=e63] [cursor=pointer]:
+            - /url: /upload
+            - img [ref=e65]
+            - generic [ref=e68]:
+              - heading "Upload Video" [level=3] [ref=e69]
+              - paragraph [ref=e70]: Drop your raw footage and let AI edit it
+            - img [ref=e71]
+          - link "Enhance Photos Upscale, sharpen, and color-correct images" [ref=e73] [cursor=pointer]:
+            - /url: /photos
+            - img [ref=e75]
+            - generic [ref=e79]:
+              - heading "Enhance Photos" [level=3] [ref=e80]
+              - paragraph [ref=e81]: Upscale, sharpen, and color-correct images
+            - img [ref=e82]
+        - generic [ref=e84]:
+          - heading "Recent Projects" [level=2] [ref=e85]
+          - img [ref=e87]
+  - alert [ref=e89]

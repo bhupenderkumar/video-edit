@@ -120,12 +120,12 @@ export default function UploadPage() {
 
       const { id } = await uploadRes.json();
 
-      // Start processing
-      await fetch("/api/process", {
+      // Start processing (fire-and-forget — project page polls for status)
+      fetch("/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: id }),
-      });
+      }).catch(() => {});
 
       router.push(`/projects/${id}`);
     } catch (err) {
