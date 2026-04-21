@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { processVideo } from "@/lib/queue/processor";
 
 export async function POST(request: NextRequest) {
@@ -12,9 +13,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fire-and-forget — client polls /api/status/[id] for updates
-    processVideo(projectId).catch((err) => {
-      console.error(`Processing failed for ${projectId}:`, err);
+    // Use after() to keep serverless function alive on Vercel
+    after(async () => {
+      try {
+        await processVideo(projectId);
+      } catch (err) {
+        console.error(`Processing failed for ${projectId}:`, err);
+      }
     });
 
     return NextResponse.json({

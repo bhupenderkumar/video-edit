@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v4 as uuid } from "uuid";
 import { db } from "@/lib/db";
+import { createClient } from "@supabase/supabase-js";
 
 const IS_VERCEL = !!process.env.VERCEL;
 const UPLOAD_DIR = IS_VERCEL ? "/tmp/uploads" : (process.env.UPLOAD_DIR || "./uploads");
@@ -46,7 +47,29 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(UPLOAD_DIR, sanitizedName);
 
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const buffer = Buffer.from(bytes);
+    await writeFile(filePath, buffer);
+
+    // On Vercel, also upload to Supabase Storage so the file survives across function instances
+    if (IS_VERCEL) {
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const storagePath = `uploads/${sanitizedName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("videos")
+          .upload(storagePath, buffer, {
+            contentType: file.type,
+            upsert: true,
+          });
+        if (uploadError) {
+          console.error("[upload] Supabase Storage upload failed:", uploadError.message);
+        } else {
+          console.log(`[upload] Stored in Supabase Storage: ${storagePath}`);
+        }
+      }
+    }
 
     await db.createProject({
       id: projectId,
