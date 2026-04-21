@@ -1,0 +1,10 @@
+node_modules/
+.next/
+uploads/
+tmp/
+output/
+data/
+*.db
+.env.local
+.env
+.vercel
