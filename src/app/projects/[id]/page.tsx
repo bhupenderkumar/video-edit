@@ -15,6 +15,8 @@ import {
   Scissors,
   Palette,
   Volume2,
+  Play,
+  Pause,
 } from "lucide-react";
 import { cn, formatDuration, formatFileSize } from "@/lib/utils";
 
@@ -147,13 +149,24 @@ export default function ProjectDetailPage({
         </div>
 
         {project.status === "completed" && (
-          <a
-            href={`/api/download/${project.id}`}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto"
-          >
-            <Download className="h-4 w-4" />
-            Download Video
-          </a>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <a
+              href={`/api/download/${project.id}?type=original`}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium transition-colors hover:bg-secondary sm:flex-initial"
+            >
+              <Download className="h-4 w-4" />
+              Original
+            </a>
+            {project.output_path && (
+              <a
+                href={`/api/download/${project.id}?type=edited`}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:flex-initial"
+              >
+                <Download className="h-4 w-4" />
+                Edited
+              </a>
+            )}
+          </div>
         )}
       </div>
 
@@ -216,6 +229,91 @@ export default function ProjectDetailPage({
           </div>
         )}
       </div>
+
+      {/* Video Player */}
+      {project.status === "completed" && (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4 sm:p-6 lg:mb-8">
+          <div className="mb-4 flex items-center gap-2">
+            <Play className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-semibold sm:text-lg">Video Preview</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Original Video */}
+            <div>
+              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Original Video
+              </p>
+              <div className="overflow-hidden rounded-lg border border-border bg-black">
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="aspect-video w-full"
+                  src={`/api/video/${project.id}`}
+                >
+                  Your browser does not support video playback.
+                </video>
+              </div>
+              <div className="mt-2 flex justify-center">
+                <a
+                  href={`/api/download/${project.id}?type=original`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-secondary"
+                >
+                  <Download className="h-3 w-3" />
+                  Download Original
+                </a>
+              </div>
+            </div>
+
+            {/* Edited Video (if available) or Analysis Summary */}
+            <div>
+              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {project.output_path ? "Edited Video" : "AI Analysis"}
+              </p>
+              {project.output_path ? (
+                <>
+                  <div className="overflow-hidden rounded-lg border border-border bg-black">
+                    <video
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="aspect-video w-full"
+                      src={`/api/download/${project.id}?type=edited`}
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  </div>
+                  <div className="mt-2 flex justify-center">
+                    <a
+                      href={`/api/download/${project.id}?type=edited`}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                      <Download className="h-3 w-3" />
+                      Download Edited
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="flex aspect-video flex-col items-center justify-center rounded-lg border border-dashed border-border bg-secondary/30 p-6">
+                  <Scissors className="mb-3 h-8 w-8 text-muted-foreground" />
+                  <p className="text-center text-sm font-medium text-muted-foreground">
+                    AI Edit Plan Ready
+                  </p>
+                  <p className="mt-1 text-center text-xs text-muted-foreground/70">
+                    Video rendering is available in local processing mode.
+                    {project.edit_plan && (
+                      <span className="mt-1 block">
+                        {project.edit_plan.segments.length} segments • {project.edit_plan.captions.length} captions planned
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Results Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
