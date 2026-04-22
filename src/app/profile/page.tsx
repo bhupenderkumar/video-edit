@@ -20,10 +20,12 @@ const industries = [
   "Retail Store",
   "Photography",
   "Real Estate",
+  "School / Academy",
   "Education / Coaching",
   "Healthcare / Clinic",
   "eCommerce",
   "Agency / Consulting",
+  "Events / Celebrations",
   "Other",
 ];
 

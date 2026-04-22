@@ -47,6 +47,10 @@ type ProjectDetail = {
     color_grade: string;
     audio_adjustments: { normalize: boolean; remove_silence: boolean };
     output_format: { aspect_ratio: string; resolution: string };
+    intro_slide?: { title: string; subtitle: string; duration: number; style: string; color: string };
+    outro_slide?: { title: string; subtitle: string; duration: number; style: string; color: string };
+    music_suggestion?: { mood: string; genre: string; tempo: string; description: string; keywords: string[] };
+    effects?: { brightness: number; contrast: number; saturation: number };
   } | null;
   duration: number | null;
   resolution: string | null;
@@ -409,6 +413,12 @@ export default function ProjectDetailPage({
                 { label: "Resolution", value: project.edit_plan.output_format.resolution },
                 { label: "Color Grade", value: project.edit_plan.color_grade },
                 { label: "Audio", value: project.edit_plan.audio_adjustments.normalize ? "Normalized" : "Original" },
+                ...(project.edit_plan.intro_slide ? [{ label: "Intro Style", value: project.edit_plan.intro_slide.style }] : []),
+                ...(project.edit_plan.music_suggestion ? [{ label: "Music Mood", value: `${project.edit_plan.music_suggestion.mood} ${project.edit_plan.music_suggestion.genre}` }] : []),
+                ...(project.edit_plan.effects ? [
+                  { label: "Brightness", value: `${(project.edit_plan.effects.brightness * 100).toFixed(0)}%` },
+                  { label: "Contrast", value: `${(project.edit_plan.effects.contrast * 100).toFixed(0)}%` },
+                ] : []),
               ].map((item) => (
                 <div key={item.label} className="rounded-lg bg-secondary/50 p-3">
                   <p className="text-xs text-muted-foreground">{item.label}</p>

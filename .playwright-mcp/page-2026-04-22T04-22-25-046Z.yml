@@ -1,0 +1,31 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e9]:
+          - heading "ClipAI" [level=1] [ref=e10]
+          - paragraph [ref=e11]: AI Video Editor
+      - navigation [ref=e12]:
+        - link "Home" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - text: Home
+        - link "Upload" [ref=e19] [cursor=pointer]:
+          - /url: /upload
+          - img [ref=e20]
+          - text: Upload
+        - link "Photos" [ref=e23] [cursor=pointer]:
+          - /url: /photos
+          - img [ref=e24]
+          - text: Photos
+        - link "Brand" [ref=e28] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e29]
+          - text: Brand
+      - generic [ref=e33]:
+        - paragraph [ref=e34]: AI Powered
+        - paragraph [ref=e35]: Groq LLM • Smart Editing
+    - main [ref=e36]:
+      - img [ref=e39]
+  - alert [ref=e41]

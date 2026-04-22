@@ -1,0 +1,157 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e9]:
+          - heading "ClipAI" [level=1] [ref=e10]
+          - paragraph [ref=e11]: AI Video Editor
+      - navigation [ref=e12]:
+        - link "Home" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - text: Home
+        - link "Upload" [ref=e19] [cursor=pointer]:
+          - /url: /upload
+          - img [ref=e20]
+          - text: Upload
+        - link "Photos" [ref=e23] [cursor=pointer]:
+          - /url: /photos
+          - img [ref=e24]
+          - text: Photos
+        - link "Brand" [ref=e28] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e29]
+          - text: Brand
+      - generic [ref=e33]:
+        - paragraph [ref=e34]: AI Powered
+        - paragraph [ref=e35]: Groq LLM • Smart Editing
+    - main [ref=e36]:
+      - generic [ref=e38]:
+        - link "Back to Dashboard" [ref=e42] [cursor=pointer]:
+          - /url: /
+          - img [ref=e43]
+          - text: Back to Dashboard
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - heading "clipai_edited_video" [level=1] [ref=e47]
+            - generic [ref=e48]:
+              - generic [ref=e49]: "Duration: 0:11"
+              - generic [ref=e50]: • 977.5 KB
+          - link "Original" [ref=e52] [cursor=pointer]:
+            - /url: /api/download/e72e9825-ad6b-4325-a32f-eeb0155a64e3?type=original
+            - img [ref=e53]
+            - text: Original
+        - generic [ref=e56]:
+          - heading "Processing Pipeline" [level=2] [ref=e57]
+          - generic [ref=e58]:
+            - generic [ref=e60]:
+              - img [ref=e61]
+              - generic [ref=e64]: Uploaded
+            - generic [ref=e67]:
+              - img [ref=e68]
+              - generic [ref=e71]: Extracting
+            - generic [ref=e74]:
+              - img [ref=e75]
+              - generic [ref=e78]: Transcribing
+            - generic [ref=e81]:
+              - img [ref=e82]
+              - generic [ref=e85]: Analyzing Scenes
+            - generic [ref=e88]:
+              - img [ref=e89]
+              - generic [ref=e92]: Planning Edit
+            - generic [ref=e95]:
+              - img [ref=e96]
+              - generic [ref=e99]: Rendering
+            - generic [ref=e102]:
+              - img [ref=e103]
+              - generic [ref=e106]: Done
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - img [ref=e109]
+            - heading "Video Comparison" [level=2] [ref=e111]
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - paragraph [ref=e114]: Original Video
+              - generic [ref=e116]: Your browser does not support video playback.
+              - link "Download Original" [ref=e118] [cursor=pointer]:
+                - /url: /api/download/e72e9825-ad6b-4325-a32f-eeb0155a64e3?type=original
+                - img [ref=e119]
+                - text: Download Original
+            - generic [ref=e122]:
+              - paragraph [ref=e123]: AI Edited Preview
+              - generic [ref=e124]:
+                - generic [ref=e131]:
+                  - button [active] [ref=e132]:
+                    - img [ref=e226]
+                  - button [ref=e135]:
+                    - img [ref=e136]
+                  - generic [ref=e141]: 0:02 / 0:11
+                - button "Export Edited Video" [ref=e144]:
+                  - img [ref=e145]
+                  - text: Export Edited Video
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - img [ref=e151]
+              - heading "Transcript" [level=3] [ref=e153]
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - generic [ref=e156]: 0:00
+                - paragraph [ref=e157]: Thank you Valentina, thank you everyone for joining this call.
+              - generic [ref=e158]:
+                - generic [ref=e159]: 0:05
+                - paragraph [ref=e160]: So let me start sharing my screen.
+              - generic [ref=e161]:
+                - generic [ref=e162]: 0:08
+                - paragraph [ref=e163]: Before I get into the details of MCP.
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - img [ref=e166]
+              - heading "Scene Analysis" [level=3] [ref=e169]
+            - generic [ref=e171]:
+              - generic [ref=e172]: 0:00
+              - generic [ref=e173]:
+                - paragraph [ref=e174]: Video content inferred from transcript
+                - paragraph [ref=e175]: "speaking • neutral • Quality: 5/10"
+          - generic [ref=e176]:
+            - generic [ref=e177]:
+              - img [ref=e178]
+              - heading "AI Edit Plan" [level=3] [ref=e184]
+            - generic [ref=e185]:
+              - generic [ref=e186]:
+                - paragraph [ref=e187]: SEGMENTS TO KEEP
+                - generic [ref=e188]:
+                  - generic [ref=e189]:
+                    - generic [ref=e190]: 0:00 → 0:04
+                    - generic [ref=e191]: opening scene
+                  - generic [ref=e192]:
+                    - generic [ref=e193]: 0:04 → 0:07
+                    - generic [ref=e194]: screen sharing intro
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: 0:07 → 0:11
+                    - generic [ref=e197]: MCP details intro
+              - generic [ref=e198]:
+                - paragraph [ref=e199]: CAPTIONS
+                - generic [ref=e200]:
+                  - generic [ref=e201]: "\"Thank you for joining\""
+                  - generic [ref=e202]: "\"Sharing my screen\""
+                  - generic [ref=e203]: "\"MCP details\""
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - img [ref=e206]
+              - heading "Output Settings" [level=3] [ref=e212]
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - paragraph [ref=e215]: Aspect Ratio
+                - paragraph [ref=e216]: 9:16
+              - generic [ref=e217]:
+                - paragraph [ref=e218]: Resolution
+                - paragraph [ref=e219]: 1080x1920
+              - generic [ref=e220]:
+                - paragraph [ref=e221]: Color Grade
+                - paragraph [ref=e222]: natural
+              - generic [ref=e223]:
+                - paragraph [ref=e224]: Audio
+                - paragraph [ref=e225]: Normalized
+  - alert [ref=e41]

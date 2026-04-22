@@ -1,0 +1,4 @@
+[    2229ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://video-edit-taupe.vercel.app/favicon.ico:0
+[    2282ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://video-edit-taupe.vercel.app/icon-192.png:0
+[    2283ms] [WARNING] Error while trying to use the following icon from the Manifest: https://video-edit-taupe.vercel.app/icon-192.png (Download error or resource isn't a valid image) @ https://video-edit-taupe.vercel.app/projects/e72e9825-ad6b-4325-a32f-eeb0155a64e3:0
+[   42139ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://video-edit-taupe.vercel.app/favicon.ico:0
