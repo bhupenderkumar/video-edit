@@ -15,6 +15,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { cn, formatFileSize } from "@/lib/utils";
+import { createClient } from "@supabase/supabase-js";
+import { v4 as uuid } from "uuid";
 
 const platforms = [
   {
@@ -66,6 +68,8 @@ export default function UploadPage() {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
 
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   function handleFileSelect(selectedFile: File) {
     const allowedTypes = [
       "video/mp4",
@@ -100,34 +104,93 @@ export default function UploadPage() {
     if (!file) return;
     setUploading(true);
     setError("");
+    setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append("video", file);
-      formData.append("title", title || "Untitled");
-      formData.append("target_platform", platform);
-      formData.append("target_duration", duration.toString());
+      const projectId = uuid();
+      const ext = file.name.match(/\.[^/.]+$/)?.[0] || ".mp4";
+      const sanitizedName = `${projectId}${ext}`;
+      const storagePath = `uploads/${sanitizedName}`;
 
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      // --- Direct upload to Supabase Storage from browser ---
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (!uploadRes.ok) {
-        const data = await uploadRes.json();
-        throw new Error(data.error || "Upload failed");
+      if (!supabaseUrl || !supabaseAnonKey) {
+        // Fallback: old FormData upload via API (works locally)
+        const formData = new FormData();
+        formData.append("video", file);
+        formData.append("title", title || "Untitled");
+        formData.append("target_platform", platform);
+        formData.append("target_duration", duration.toString());
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const data = await uploadRes.json();
+          throw new Error(data.error || "Upload failed");
+        }
+
+        const { id } = await uploadRes.json();
+        fetch("/api/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: id }),
+        }).catch(() => {});
+        router.push(`/projects/${id}`);
+        return;
       }
 
-      const { id } = await uploadRes.json();
+      // Upload directly to Supabase Storage (bypasses Vercel body limit)
+      setUploadProgress(10);
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const { error: storageError } = await supabase.storage
+        .from("videos")
+        .upload(storagePath, file, {
+          contentType: file.type,
+          upsert: true,
+        });
 
-      // Start processing (fire-and-forget — project page polls for status)
+      if (storageError) {
+        throw new Error(`Storage upload failed: ${storageError.message}`);
+      }
+
+      setUploadProgress(70);
+
+      // Send metadata-only request to create project record
+      const metaRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          title: title || "Untitled",
+          target_platform: platform,
+          target_duration: duration,
+          file_size: file.size,
+          file_name: sanitizedName,
+          storage_path: storagePath,
+        }),
+      });
+
+      if (!metaRes.ok) {
+        const data = await metaRes.json();
+        throw new Error(data.error || "Failed to create project");
+      }
+
+      setUploadProgress(90);
+
+      // Start processing
       fetch("/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: id }),
+        body: JSON.stringify({ projectId }),
       }).catch(() => {});
 
-      router.push(`/projects/${id}`);
+      setUploadProgress(100);
+      router.push(`/projects/${projectId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setUploading(false);
@@ -298,7 +361,7 @@ export default function UploadPage() {
             {uploading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading & Starting AI...
+                {uploadProgress < 70 ? `Uploading... ${uploadProgress}%` : uploadProgress < 100 ? "Creating project..." : "Redirecting..."}
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">

@@ -10,6 +10,49 @@ const UPLOAD_DIR = IS_VERCEL ? "/tmp/uploads" : (process.env.UPLOAD_DIR || "./up
 
 export async function POST(request: NextRequest) {
   try {
+    const contentType = request.headers.get("content-type") || "";
+
+    // ── JSON metadata path (client already uploaded to Supabase Storage) ──
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      const {
+        projectId,
+        title = "Untitled",
+        target_platform = "instagram_reels",
+        target_duration = 30,
+        file_size = 0,
+        file_name,
+        storage_path,
+      } = body;
+
+      if (!projectId || !file_name || !storage_path) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+
+      // On Vercel we don't need a local file — processor downloads from Supabase Storage
+      const filePath = IS_VERCEL ? `/tmp/uploads/${file_name}` : path.join(UPLOAD_DIR, file_name);
+
+      await db.createProject({
+        id: projectId,
+        profile_id: "default",
+        title,
+        status: "uploaded",
+        original_path: filePath,
+        target_platform,
+        target_duration: typeof target_duration === "string" ? parseInt(target_duration) : target_duration,
+        file_size,
+        output_path: null,
+      });
+
+      return NextResponse.json({
+        id: projectId,
+        title,
+        status: "uploaded",
+        message: "Project created successfully",
+      });
+    }
+
+    // ── FormData path (local dev or fallback) ──────────────────────────────
     const formData = await request.formData();
     const file = formData.get("video") as File;
     const title = (formData.get("title") as string) || "Untitled Project";
