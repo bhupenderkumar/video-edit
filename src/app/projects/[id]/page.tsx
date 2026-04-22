@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -22,6 +22,7 @@ import {
 import { cn, formatDuration, formatFileSize } from "@/lib/utils";
 
 const EditedVideoPlayer = dynamic(() => import("@/components/EditedVideoPlayer"), { ssr: false });
+const AIChatEditor = dynamic(() => import("@/components/AIChatEditor"), { ssr: false });
 
 type ProjectDetail = {
   id: string;
@@ -88,14 +89,9 @@ export default function ProjectDetailPage({
   const { id } = use(params);
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [planVersion, setPlanVersion] = useState(0);
 
-  useEffect(() => {
-    fetchProject();
-    const interval = setInterval(fetchProject, 2000);
-    return () => clearInterval(interval);
-  }, [id]);
-
-  async function fetchProject() {
+  const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${id}`);
       if (res.ok) {
@@ -107,7 +103,18 @@ export default function ProjectDetailPage({
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    fetchProject();
+    const interval = setInterval(fetchProject, 2000);
+    return () => clearInterval(interval);
+  }, [fetchProject]);
+
+  // Re-fetch project when AI chat updates the plan
+  useEffect(() => {
+    if (planVersion > 0) fetchProject();
+  }, [planVersion, fetchProject]);
 
   if (loading) {
     return (
@@ -431,6 +438,14 @@ export default function ProjectDetailPage({
           </div>
         )}
       </div>
+
+      {/* AI Chat Editor - floating button */}
+      {project.status === "completed" && project.edit_plan && (
+        <AIChatEditor
+          projectId={project.id}
+          onPlanUpdated={() => setPlanVersion(v => v + 1)}
+        />
+      )}
     </div>
   );
 }
