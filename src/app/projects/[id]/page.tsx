@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   Download,
@@ -19,6 +20,8 @@ import {
   Pause,
 } from "lucide-react";
 import { cn, formatDuration, formatFileSize } from "@/lib/utils";
+
+const EditedVideoPlayer = dynamic(() => import("@/components/EditedVideoPlayer"), { ssr: false });
 
 type ProjectDetail = {
   id: string;
@@ -39,6 +42,7 @@ type ProjectDetail = {
   }[] | null;
   edit_plan: {
     segments: { start: number; end: number; reason: string }[];
+    transitions: { at: number; type: string; duration: number }[];
     captions: { start: number; end: number; text: string; style: string }[];
     color_grade: string;
     audio_adjustments: { normalize: boolean; remove_silence: boolean };
@@ -235,10 +239,10 @@ export default function ProjectDetailPage({
         <div className="mb-6 rounded-xl border border-border bg-card p-4 sm:p-6 lg:mb-8">
           <div className="mb-4 flex items-center gap-2">
             <Play className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold sm:text-lg">Video Preview</h2>
+            <h2 className="text-base font-semibold sm:text-lg">Video Comparison</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Original Video */}
             <div>
               <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -249,7 +253,8 @@ export default function ProjectDetailPage({
                   controls
                   playsInline
                   preload="metadata"
-                  className="aspect-video w-full"
+                  className="w-full"
+                  style={{ aspectRatio: project.edit_plan?.output_format.aspect_ratio === "9:16" ? "9/16" : project.edit_plan?.output_format.aspect_ratio === "1:1" ? "1/1" : "16/9" }}
                   src={`/api/video/${project.id}`}
                 >
                   Your browser does not support video playback.
@@ -266,48 +271,21 @@ export default function ProjectDetailPage({
               </div>
             </div>
 
-            {/* Edited Video (if available) or Analysis Summary */}
+            {/* AI Edited Video Preview */}
             <div>
-              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {project.output_path ? "Edited Video" : "AI Analysis"}
+              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-primary">
+                AI Edited Preview
               </p>
-              {project.output_path ? (
-                <>
-                  <div className="overflow-hidden rounded-lg border border-border bg-black">
-                    <video
-                      controls
-                      playsInline
-                      preload="metadata"
-                      className="aspect-video w-full"
-                      src={`/api/download/${project.id}?type=edited`}
-                    >
-                      Your browser does not support video playback.
-                    </video>
-                  </div>
-                  <div className="mt-2 flex justify-center">
-                    <a
-                      href={`/api/download/${project.id}?type=edited`}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                      <Download className="h-3 w-3" />
-                      Download Edited
-                    </a>
-                  </div>
-                </>
+              {project.edit_plan ? (
+                <EditedVideoPlayer
+                  videoSrc={`/api/video/${project.id}`}
+                  editPlan={project.edit_plan}
+                  projectId={project.id}
+                  projectTitle={project.title}
+                />
               ) : (
-                <div className="flex aspect-video flex-col items-center justify-center rounded-lg border border-dashed border-border bg-secondary/30 p-6">
-                  <Scissors className="mb-3 h-8 w-8 text-muted-foreground" />
-                  <p className="text-center text-sm font-medium text-muted-foreground">
-                    AI Edit Plan Ready
-                  </p>
-                  <p className="mt-1 text-center text-xs text-muted-foreground/70">
-                    Video rendering is available in local processing mode.
-                    {project.edit_plan && (
-                      <span className="mt-1 block">
-                        {project.edit_plan.segments.length} segments • {project.edit_plan.captions.length} captions planned
-                      </span>
-                    )}
-                  </p>
+                <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border bg-secondary/30">
+                  <p className="text-sm text-muted-foreground">No edit plan available</p>
                 </div>
               )}
             </div>
