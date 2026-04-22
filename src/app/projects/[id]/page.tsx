@@ -41,7 +41,7 @@ type ProjectDetail = {
     quality: number;
   }[] | null;
   edit_plan: {
-    segments: { start: number; end: number; reason: string }[];
+    segments: { start: number; end: number; reason: string; animation?: string }[];
     transitions: { at: number; type: string; duration: number }[];
     captions: { start: number; end: number; text: string; style: string }[];
     color_grade: string;

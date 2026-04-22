@@ -7,6 +7,7 @@ export interface EditSegment {
   start: number;
   end: number;
   reason: string;
+  animation?: string;
 }
 
 export interface EditTransition {
@@ -126,12 +127,11 @@ function buildFallbackPlan(
 
   const segments: EditSegment[] = [];
   const transitions: EditTransition[] = [];
+  const animPool = ["zoom_in", "ken_burns", "pan_left", "drift_right", "parallax", "focus_pull", "glide", "zoom_out", "ken_burns_reverse", "pan_right"];
 
   if (videoDuration <= targetDuration) {
-    // Use entire video
-    segments.push({ start: 0, end: videoDuration, reason: "Full video" });
+    segments.push({ start: 0, end: videoDuration, reason: "Full video", animation: "ken_burns" });
   } else {
-    // Pick evenly spaced segments
     const gap = (videoDuration - effectiveDuration) / segmentCount;
     let cursor = 0;
     for (let i = 0; i < segmentCount; i++) {
@@ -141,6 +141,7 @@ function buildFallbackPlan(
         start: Math.max(0, start),
         end,
         reason: `Segment ${i + 1}`,
+        animation: animPool[i % animPool.length],
       });
       if (i > 0) {
         transitions.push({ at: start, type: "crossfade", duration: 0.5 });
@@ -208,8 +209,8 @@ function buildFallbackPlan(
     },
     effects: {
       brightness: 1.0,
-      contrast: 1.05,
-      saturation: 1.1,
+      contrast: 1.0,
+      saturation: 1.0,
     },
   };
 }
@@ -245,7 +246,7 @@ Scene descriptions: ${frameAnalysis.slice(0, 5).map(f => f.description).join("; 
 
 Return ONLY this JSON structure:
 {
-  "segments": [{"start": 0, "end": 10, "reason": "opening scene"}],
+  "segments": [{"start": 0, "end": 10, "reason": "opening scene", "animation": "zoom_in"}],
   "transitions": [{"at": 10, "type": "crossfade", "duration": 0.5}],
   "captions": [{"start": 0, "end": 3, "text": "${businessContext.businessName}", "style": "title_center"}, {"start": 3, "end": 6, "text": "subtitle text", "style": "subtitle_bottom"}],
   "color_grade": "natural",
@@ -254,7 +255,7 @@ Return ONLY this JSON structure:
   "intro_slide": {"title": "${businessContext.businessName}", "subtitle": "A catchy subtitle based on content", "duration": 4, "style": "gradient", "color": "#6d28d9"},
   "outro_slide": {"title": "Thank You!", "subtitle": "Follow us for more", "duration": 3, "style": "minimal", "color": "#6d28d9"},
   "music_suggestion": {"mood": "uplifting", "genre": "pop", "tempo": "medium", "description": "A cheerful background track", "keywords": ["happy", "celebration", "school"]},
-  "effects": {"brightness": 1.0, "contrast": 1.05, "saturation": 1.1}
+  "effects": {"brightness": 1.0, "contrast": 1.0, "saturation": 1.0}
 }
 
 Rules:
@@ -266,7 +267,10 @@ Rules:
 - For captions, include key moments from the transcript as subtitle_bottom and the title as title_center
 - Add "lower_third" captions for speaker names or important info
 - effects brightness/contrast/saturation should be between 0.5 and 2.0 (1.0 = no change)
-- transition types: "crossfade", "fade_black", "cut"`;
+- transition types: "crossfade", "fade_black", "cut"
+- For each segment, pick an animation from: "zoom_in", "zoom_out", "ken_burns", "ken_burns_reverse", "pan_left", "pan_right", "pan_up", "pan_down", "drift_left", "drift_right", "drift_up", "drift_down", "slide_in_left", "slide_in_right", "fade_in_zoom", "focus_pull", "parallax", "glide", "cinematic_bars", "dramatic_zoom", "pulse", "sway", "float", "bounce_zoom", "diagonal_tlbr", "diagonal_bltr", "rotate_cw", "rotate_ccw", "tilt", "zoom_in_rotate", "zoom_out_rotate", "reveal_scale"
+- Vary the animation per segment for visual interest
+- effects brightness/contrast/saturation defaults should be 1.0 (no artificial lighting changes unless needed)`;
 
     const response = await llmGenerate(prompt, systemPrompt);
     console.log("[edit-plan] LLM responded, parsing...");
