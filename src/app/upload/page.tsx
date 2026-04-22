@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -13,10 +13,22 @@ import {
   Monitor,
   Smartphone,
   MessageCircle,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Clock,
 } from "lucide-react";
 import { cn, formatFileSize } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
 import { v4 as uuid } from "uuid";
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 const platforms = [
   {
@@ -67,8 +79,74 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
-
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Video preview state
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoRes, setVideoRes] = useState({ w: 0, h: 0 });
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [previewMuted, setPreviewMuted] = useState(false);
+  const [previewTime, setPreviewTime] = useState(0);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Generate thumbnail when file changes
+  useEffect(() => {
+    if (!file) {
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      setVideoUrl(null);
+      setThumbnail(null);
+      setVideoDuration(0);
+      setVideoRes({ w: 0, h: 0 });
+      setShowPreview(false);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
+
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+
+    video.onloadedmetadata = () => {
+      setVideoDuration(video.duration);
+      setVideoRes({ w: video.videoWidth, h: video.videoHeight });
+      // Seek to 1s or 25% for a good thumbnail frame
+      video.currentTime = Math.min(1, video.duration * 0.25);
+    };
+
+    video.onseeked = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        setThumbnail(canvas.toDataURL("image/jpeg", 0.85));
+      }
+    };
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file]);
+
+  const togglePreviewPlay = useCallback(() => {
+    const v = previewVideoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play();
+      setPreviewPlaying(true);
+    } else {
+      v.pause();
+      setPreviewPlaying(false);
+    }
+  }, []);
 
   function handleFileSelect(selectedFile: File) {
     const allowedTypes = [
@@ -241,22 +319,71 @@ export default function UploadPage() {
 
             {file ? (
               <div className="flex flex-col items-center">
-                <CheckCircle2 className="h-12 w-12 text-success" />
-                <p className="mt-3 text-lg font-medium">{file.name}</p>
+                {/* Thumbnail Preview */}
+                {thumbnail ? (
+                  <div className="relative mb-3 w-full max-w-md overflow-hidden rounded-lg">
+                    <img
+                      src={thumbnail}
+                      alt="Video thumbnail"
+                      className="w-full rounded-lg object-cover"
+                      style={{ maxHeight: 220 }}
+                    />
+                    {/* Play overlay */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPreview(true);
+                        setPreviewPlaying(false);
+                        setPreviewTime(0);
+                      }}
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/40"
+                    >
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-lg transition-transform hover:scale-110">
+                        <Play className="ml-1 h-7 w-7" fill="currentColor" />
+                      </div>
+                    </button>
+                    {/* Duration badge */}
+                    <div className="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
+                      {formatTime(videoDuration)}
+                    </div>
+                    {/* Resolution badge */}
+                    <div className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
+                      {videoRes.w}×{videoRes.h}
+                    </div>
+                  </div>
+                ) : (
+                  <CheckCircle2 className="h-12 w-12 text-success" />
+                )}
+                <p className="mt-1 text-lg font-medium">{file.name}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {formatFileSize(file.size)} • {file.type.split("/")[1]?.toUpperCase()}
+                  {videoDuration > 0 && ` • ${formatTime(videoDuration)}`}
                 </p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    setTitle("");
-                  }}
-                  className="mt-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Remove
-                </button>
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPreview(true);
+                      setPreviewPlaying(false);
+                      setPreviewTime(0);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Preview
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                      setTitle("");
+                    }}
+                    className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Remove
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center">
@@ -425,6 +552,142 @@ export default function UploadPage() {
           </div>
         </div>
       </div>
+
+      {/* Video Preview Modal */}
+      {showPreview && videoUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => {
+            setShowPreview(false);
+            if (previewVideoRef.current) previewVideoRef.current.pause();
+            setPreviewPlaying(false);
+          }}
+        >
+          <div
+            className="relative mx-4 w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Film className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Video Preview</span>
+                <span className="rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                  {videoRes.w}×{videoRes.h}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPreview(false);
+                  if (previewVideoRef.current) previewVideoRef.current.pause();
+                  setPreviewPlaying(false);
+                }}
+                className="rounded-lg p-1.5 hover:bg-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Video */}
+            <div className="relative bg-black">
+              <video
+                ref={previewVideoRef}
+                src={videoUrl}
+                className="mx-auto max-h-[60vh] w-full object-contain"
+                playsInline
+                muted={previewMuted}
+                onTimeUpdate={() => {
+                  if (previewVideoRef.current)
+                    setPreviewTime(previewVideoRef.current.currentTime);
+                }}
+                onEnded={() => setPreviewPlaying(false)}
+                onClick={togglePreviewPlay}
+              />
+              {/* Center play button when paused */}
+              {!previewPlaying && (
+                <button
+                  onClick={togglePreviewPlay}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-lg transition-transform hover:scale-110">
+                    <Play className="ml-1 h-8 w-8" fill="currentColor" />
+                  </div>
+                </button>
+              )}
+            </div>
+
+            {/* Controls */}
+            <div className="border-t border-border bg-card px-4 py-3">
+              {/* Progress bar */}
+              <div
+                className="group mb-3 h-1.5 cursor-pointer rounded-full bg-secondary"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = (e.clientX - rect.left) / rect.width;
+                  const time = pct * videoDuration;
+                  if (previewVideoRef.current) previewVideoRef.current.currentTime = time;
+                  setPreviewTime(time);
+                }}
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${videoDuration ? (previewTime / videoDuration) * 100 : 0}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={togglePreviewPlay} className="rounded-lg p-1.5 hover:bg-secondary">
+                    {previewPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  </button>
+                  <button
+                    onClick={() => setPreviewMuted(!previewMuted)}
+                    className="rounded-lg p-1.5 hover:bg-secondary"
+                  >
+                    {previewMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </button>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {formatTime(previewTime)} / {formatTime(videoDuration)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    {formatTime(videoDuration)}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (previewVideoRef.current && previewVideoRef.current.requestFullscreen) {
+                        previewVideoRef.current.requestFullscreen();
+                      }
+                    }}
+                    className="rounded-lg p-1.5 hover:bg-secondary"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Verify banner */}
+            <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2.5">
+              <p className="text-xs text-muted-foreground">
+                Verify this is the right video before uploading
+              </p>
+              <button
+                onClick={() => {
+                  setShowPreview(false);
+                  if (previewVideoRef.current) previewVideoRef.current.pause();
+                  setPreviewPlaying(false);
+                }}
+                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Looks Good
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
