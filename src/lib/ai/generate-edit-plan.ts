@@ -115,23 +115,87 @@ function buildFallbackPlan(
   businessName: string,
   transcriptSegments: TranscriptSegment[]
 ): EditPlan {
-  // Smart fallback: evenly sample from video to fill target duration
   const isVertical =
     targetPlatform === "instagram_reels" ||
     targetPlatform === "tiktok" ||
     targetPlatform === "youtube_shorts";
 
   const effectiveDuration = Math.min(targetDuration, videoDuration);
-  const segmentCount = Math.max(1, Math.min(5, Math.ceil(effectiveDuration / 15)));
-  const segLen = effectiveDuration / segmentCount;
+  const animPool = ["zoom_in", "ken_burns", "pan_left", "drift_right", "parallax", "focus_pull", "glide", "zoom_out", "ken_burns_reverse", "pan_right"];
 
   const segments: EditSegment[] = [];
   const transitions: EditTransition[] = [];
-  const animPool = ["zoom_in", "ken_burns", "pan_left", "drift_right", "parallax", "focus_pull", "glide", "zoom_out", "ken_burns_reverse", "pan_right"];
 
   if (videoDuration <= targetDuration) {
+    // Use entire video
     segments.push({ start: 0, end: videoDuration, reason: "Full video", animation: "ken_burns" });
+  } else if (transcriptSegments.length > 2) {
+    // ── Best-moment selection using transcript scoring ────────────────
+    // Score each transcript segment by content quality
+    const scored = transcriptSegments.map((seg, idx) => {
+      let score = 0;
+      const text = seg.text.trim();
+      const wordCount = text.split(/\s+/).length;
+      // Prefer segments with actual content (not filler)
+      if (wordCount >= 3) score += 2;
+      if (wordCount >= 6) score += 1;
+      // Penalize very short or empty segments
+      if (wordCount <= 1 || text.length < 3) score -= 3;
+      // Bonus for questions, exclamations (engaging content)
+      if (text.includes("?") || text.includes("!")) score += 2;
+      // Bonus for key phrases indicating highlights
+      const highlights = ["important", "amazing", "best", "welcome", "thank", "congratul", "winner", "award", "announce", "present", "special", "celebrate", "proud", "achieve", "success"];
+      if (highlights.some(h => text.toLowerCase().includes(h))) score += 3;
+      // Bonus for opening and closing (often contain key content)
+      if (idx < 3) score += 1;
+      if (idx >= transcriptSegments.length - 3) score += 1;
+      // Prefer longer duration segments (more content)
+      const duration = seg.end - seg.start;
+      if (duration >= 2 && duration <= 10) score += 1;
+      if (duration > 15) score -= 1;
+      return { seg, score, idx };
+    });
+
+    // Sort by score descending, pick top segments
+    scored.sort((a, b) => b.score - a.score);
+
+    // Determine how many segments we need
+    const segLen = 8; // target ~8s per segment
+    const segmentCount = Math.max(1, Math.min(6, Math.ceil(effectiveDuration / segLen)));
+
+    // Pick top-scored, non-overlapping segments
+    const picked: { start: number; end: number; reason: string }[] = [];
+    for (const item of scored) {
+      if (picked.length >= segmentCount) break;
+      const start = Math.max(0, item.seg.start - 0.5);
+      const duration = Math.min(segLen, item.seg.end - item.seg.start + 2);
+      const end = Math.min(videoDuration, start + Math.max(3, duration));
+      // Check overlap with already picked segments
+      const overlaps = picked.some(p => start < p.end + 0.5 && end > p.start - 0.5);
+      if (!overlaps) {
+        picked.push({ start, end, reason: item.seg.text.slice(0, 40) || `Best moment ${picked.length + 1}` });
+      }
+    }
+
+    // Sort by time order for natural flow
+    picked.sort((a, b) => a.start - b.start);
+
+    // If we didn't pick enough, add evenly spaced filler
+    if (picked.length === 0) {
+      const gap = videoDuration / 3;
+      for (let i = 0; i < 3 && picked.length < segmentCount; i++) {
+        picked.push({ start: i * gap, end: Math.min((i + 1) * gap, videoDuration), reason: `Segment ${i + 1}` });
+      }
+    }
+
+    picked.forEach((p, i) => {
+      segments.push({ ...p, animation: animPool[i % animPool.length] });
+      if (i > 0) transitions.push({ at: p.start, type: "crossfade", duration: 0.5 });
+    });
   } else {
+    // Very few transcript segments — evenly sample
+    const segmentCount = Math.max(1, Math.min(5, Math.ceil(effectiveDuration / 15)));
+    const segLen = effectiveDuration / segmentCount;
     const gap = (videoDuration - effectiveDuration) / segmentCount;
     let cursor = 0;
     for (let i = 0; i < segmentCount; i++) {
@@ -143,9 +207,7 @@ function buildFallbackPlan(
         reason: `Segment ${i + 1}`,
         animation: animPool[i % animPool.length],
       });
-      if (i > 0) {
-        transitions.push({ at: start, type: "crossfade", duration: 0.5 });
-      }
+      if (i > 0) transitions.push({ at: start, type: "crossfade", duration: 0.5 });
       cursor = end;
     }
   }
@@ -231,7 +293,7 @@ export async function generateEditPlan(
 ): Promise<EditPlan> {
   // Try LLM first, fall back to smart rule-based plan
   try {
-    const systemPrompt = `You are a professional video editor specializing in social media content for businesses and schools. You create engaging, platform-optimized edits with intro slides, transitions, captions, and music suggestions. Always return valid JSON.`;
+    const systemPrompt = `You are a professional video editor specializing in social media content for businesses and schools. Your #1 job is to pick the BEST, most engaging moments from the source video — not evenly spaced clips, but the highlights. You create engaging, platform-optimized edits with intro slides, transitions, captions, and music suggestions. Always return valid JSON.`;
     const prompt = `Create an edit plan for this video. Source video: ${videoDuration.toFixed(1)} seconds
 Business: ${businessContext.businessName} (${businessContext.industry})
 Brand tone: ${businessContext.brandTone}
@@ -240,9 +302,19 @@ Platform: ${targetPlatform}
 Target duration: ${targetDuration} seconds
 Aspect ratio: ${targetPlatform === "instagram_reels" || targetPlatform === "tiktok" || targetPlatform === "youtube_shorts" ? "9:16" : "16:9"}
 
-Transcript: ${transcript.text.slice(0, 800)}
+Transcript (with timestamps):
+${transcript.segments.slice(0, 40).map(s => `[${s.start.toFixed(1)}-${s.end.toFixed(1)}] ${s.text}`).join("\n")}
 
-Scene descriptions: ${frameAnalysis.slice(0, 5).map(f => f.description).join("; ")}
+Scene descriptions:
+${frameAnalysis.slice(0, 8).map(f => `[${f.timestamp.toFixed(1)}s] ${f.description} (action: ${f.action}, quality: ${f.quality}/10)`).join("\n")}
+
+IMPORTANT RULES FOR SEGMENT SELECTION:
+- Do NOT pick evenly spaced segments. Analyze the transcript and scene descriptions to find the BEST, most engaging moments.
+- Prefer segments with: high quality scores, clear speech, action, emotional peaks, key information, visual interest.
+- Skip segments with: silence, filler words, low quality, boring/static scenes, off-topic content.
+- Each segment should be 3-15 seconds long — not too short, not too long.
+- Total segment duration should sum to ~${targetDuration} seconds.
+- Provide a specific "reason" for why each segment was chosen (e.g. "key announcement", "best visual moment", "emotional climax").
 
 Return ONLY this JSON structure:
 {

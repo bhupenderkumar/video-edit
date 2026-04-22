@@ -11,6 +11,9 @@ import {
   ANIMATIONS, ANIMATION_NAMES, getAnimation, applyAnimTransform,
   COLOR_PRESETS, buildFilter, autoAssignAnimations,
 } from "@/lib/animations";
+import {
+  generateMusic, mapMoodToType, MUSIC_MOODS, type MusicMood,
+} from "@/lib/music-generator";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -41,16 +44,8 @@ interface Props {
   projectTitle: string;
 }
 
-// ── Royalty-free music tracks ──────────────────────────────────────────────
-
-const ROYALTY_FREE_TRACKS = [
-  { id: "uplifting", name: "Uplifting Journey", mood: "happy", tempo: "medium", url: "https://cdn.pixabay.com/audio/2024/11/29/audio_7e3dfe6f72.mp3" },
-  { id: "corporate", name: "Corporate Inspire", mood: "professional", tempo: "medium", url: "https://cdn.pixabay.com/audio/2024/09/10/audio_6e1ebc2e5e.mp3" },
-  { id: "cinematic", name: "Cinematic Emotional", mood: "dramatic", tempo: "slow", url: "https://cdn.pixabay.com/audio/2024/07/23/audio_ba3e8e0db1.mp3" },
-  { id: "fun", name: "Fun & Playful", mood: "cheerful", tempo: "fast", url: "https://cdn.pixabay.com/audio/2024/02/14/audio_8e5e7cf05d.mp3" },
-  { id: "chill", name: "Chill Lo-Fi", mood: "relaxed", tempo: "slow", url: "https://cdn.pixabay.com/audio/2024/04/15/audio_62b01623a7.mp3" },
-  { id: "celebration", name: "Celebration Time", mood: "festive", tempo: "fast", url: "https://cdn.pixabay.com/audio/2022/10/30/audio_f2bd5bfbd6.mp3" },
-];
+// ── Royalty-free music tracks (procedurally generated) ─────────────────────
+// No external URLs — generated with Web Audio API, so no CORS/403 issues.
 
 // ── Intro/Outro slide renderer ─────────────────────────────────────────────
 
@@ -228,7 +223,12 @@ function drawTransition(ctx: CanvasRenderingContext2D, type: string, progress: n
 export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, projectTitle }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const musicSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const musicGainRef = useRef<GainNode | null>(null);
+  const musicBufferRef = useRef<AudioBuffer | null>(null);
+  const musicStartTimeRef = useRef(0);
+  const musicOffsetRef = useRef(0);
   const animFrameRef = useRef<number>(0);
 
   const [playing, setPlaying] = useState(false);
@@ -412,7 +412,7 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
         setCurrentTime(totalDuration);
         setPlaying(false);
         video.pause();
-        if (bgMusicRef.current) bgMusicRef.current.pause();
+        stopMusic();
         renderFrame();
         return;
       }
@@ -445,28 +445,32 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
 
   useEffect(() => { renderFrame(); }, [renderFrame]);
 
-  // Auto-select music based on AI suggestion on mount
+  // Auto-generate music based on AI suggestion on mount
   useEffect(() => {
-    if (editPlan.music_suggestion && !selectedTrack) {
-      const mood = editPlan.music_suggestion.mood.toLowerCase();
-      const moodMap: Record<string, string> = {
-        uplifting: "uplifting", happy: "uplifting", cheerful: "fun", playful: "fun",
-        professional: "corporate", corporate: "corporate", inspiring: "corporate",
-        dramatic: "cinematic", cinematic: "cinematic", emotional: "cinematic",
-        relaxed: "chill", calm: "chill", lofi: "chill",
-        festive: "celebration", celebration: "celebration", energetic: "celebration",
-      };
-      const matchId = moodMap[mood] || "uplifting";
-      const track = ROYALTY_FREE_TRACKS.find(t => t.id === matchId);
-      if (track) {
-        setSelectedTrack(track.id);
-        const audio = new Audio(track.url);
-        audio.crossOrigin = "anonymous";
-        audio.volume = musicVolume;
-        audio.loop = true;
-        bgMusicRef.current = audio;
+    if (!editPlan.music_suggestion || selectedTrack) return;
+    const mood = mapMoodToType(editPlan.music_suggestion.mood);
+    setSelectedTrack(mood);
+    setMusicLoading(true);
+    // Generate in background — don't block render
+    (async () => {
+      try {
+        const ctx = new AudioContext();
+        audioCtxRef.current = ctx;
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = musicVolume;
+        gainNode.connect(ctx.destination);
+        musicGainRef.current = gainNode;
+        // Generate enough music for the whole video + some extra for looping
+        const dur = Math.max(60, totalDuration + 10);
+        const buffer = await generateMusic(ctx, dur, mood);
+        musicBufferRef.current = buffer;
+      } catch (err) {
+        console.warn("[music] Auto-generate failed:", err);
+        setSelectedTrack("");
+      } finally {
+        setMusicLoading(false);
       }
-    }
+    })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -491,8 +495,31 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
   }, [originalVolume, originalMuted]);
 
   useEffect(() => {
-    if (bgMusicRef.current) bgMusicRef.current.volume = musicVolume;
+    if (musicGainRef.current) musicGainRef.current.gain.value = musicVolume;
   }, [musicVolume]);
+
+  // ── Music playback helpers (Web Audio API) ────────────────────────────
+  function startMusic(offset = 0) {
+    stopMusic();
+    const ctx = audioCtxRef.current;
+    const buffer = musicBufferRef.current;
+    const gain = musicGainRef.current;
+    if (!ctx || !buffer || !gain) return;
+    if (ctx.state === "suspended") ctx.resume();
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gain);
+    source.start(0, offset % buffer.duration);
+    musicSourceRef.current = source;
+    musicStartTimeRef.current = ctx.currentTime;
+    musicOffsetRef.current = offset;
+  }
+
+  function stopMusic() {
+    try { musicSourceRef.current?.stop(); } catch { /* already stopped */ }
+    musicSourceRef.current = null;
+  }
 
   // ── Controls ─────────────────────────────────────────────────────────────
 
@@ -501,7 +528,7 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
     if (!video) return;
     if (playing) {
       video.pause();
-      if (bgMusicRef.current) bgMusicRef.current.pause();
+      stopMusic();
       setPlaying(false);
       setCurrentTime(currentTimeRef.current);
     } else {
@@ -509,16 +536,13 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
         currentTimeRef.current = 0;
         setCurrentTime(0);
         video.currentTime = 0;
-        if (bgMusicRef.current) bgMusicRef.current.currentTime = 0;
       }
       // CRITICAL: Always call video.play() from user gesture for browser autoplay policy.
-      // The RAF loop will pause/resume as needed for intro/outro phases,
-      // but the initial play() must come from a click handler.
       video.muted = originalMuted;
       video.volume = originalMuted ? 0 : originalVolume;
       playStartedRef.current = true;
       video.play().catch(() => {});
-      if (bgMusicRef.current && (selectedTrack || customMusicUrl)) bgMusicRef.current.play().catch(() => {});
+      if (musicBufferRef.current && selectedTrack) startMusic(currentTimeRef.current);
       setPlaying(true);
     }
   }
@@ -532,7 +556,7 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
     video.pause();
     video.currentTime = 0;
     playStartedRef.current = false;
-    if (bgMusicRef.current) { bgMusicRef.current.pause(); bgMusicRef.current.currentTime = 0; }
+    stopMusic();
     requestAnimationFrame(() => renderFrame());
   }
 
@@ -548,39 +572,68 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
     requestAnimationFrame(() => renderFrame());
   }
 
-  function handleSelectTrack(trackId: string) {
-    const track = ROYALTY_FREE_TRACKS.find(t => t.id === trackId);
-    if (!track) return;
-    setSelectedTrack(trackId);
+  async function handleSelectMood(mood: MusicMood) {
+    setSelectedTrack(mood);
     setCustomMusicUrl("");
     setMusicLoading(true);
-    if (bgMusicRef.current) { bgMusicRef.current.pause(); bgMusicRef.current.src = ""; }
-    const audio = new Audio(track.url);
-    audio.crossOrigin = "anonymous";
-    audio.volume = musicVolume;
-    audio.loop = true;
-    audio.oncanplay = () => setMusicLoading(false);
-    audio.onerror = () => { setMusicLoading(false); setSelectedTrack(""); };
-    bgMusicRef.current = audio;
+    stopMusic();
+    try {
+      if (!audioCtxRef.current) {
+        const ctx = new AudioContext();
+        audioCtxRef.current = ctx;
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = musicVolume;
+        gainNode.connect(ctx.destination);
+        musicGainRef.current = gainNode;
+      }
+      const dur = Math.max(60, totalDuration + 10);
+      const buffer = await generateMusic(audioCtxRef.current, dur, mood);
+      musicBufferRef.current = buffer;
+      if (playing) startMusic(currentTimeRef.current);
+    } catch (err) {
+      console.warn("[music] Generate failed:", err);
+      setSelectedTrack("");
+    } finally {
+      setMusicLoading(false);
+    }
   }
 
   function handleCustomMusic(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setCustomMusicUrl(url);
+    setCustomMusicUrl(file.name);
     setSelectedTrack("custom");
     setMusicLoading(true);
-    if (bgMusicRef.current) { bgMusicRef.current.pause(); bgMusicRef.current.src = ""; }
-    const audio = new Audio(url);
-    audio.volume = musicVolume;
-    audio.loop = true;
-    audio.oncanplay = () => setMusicLoading(false);
-    bgMusicRef.current = audio;
+    stopMusic();
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        if (!audioCtxRef.current) {
+          const ctx = new AudioContext();
+          audioCtxRef.current = ctx;
+          const gainNode = ctx.createGain();
+          gainNode.gain.value = musicVolume;
+          gainNode.connect(ctx.destination);
+          musicGainRef.current = gainNode;
+        }
+        const arrayBuf = reader.result as ArrayBuffer;
+        const buffer = await audioCtxRef.current.decodeAudioData(arrayBuf);
+        musicBufferRef.current = buffer;
+        if (playing) startMusic(currentTimeRef.current);
+      } catch (err) {
+        console.warn("[music] Custom decode failed:", err);
+        setSelectedTrack("");
+        setCustomMusicUrl("");
+      } finally {
+        setMusicLoading(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   function removeMusic() {
-    if (bgMusicRef.current) { bgMusicRef.current.pause(); bgMusicRef.current.src = ""; }
+    stopMusic();
+    musicBufferRef.current = null;
     setSelectedTrack("");
     setCustomMusicUrl("");
   }
@@ -819,12 +872,12 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
             </div>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            {ROYALTY_FREE_TRACKS.map(track => (
-              <button key={track.id} onClick={() => handleSelectTrack(track.id)}
+            {MUSIC_MOODS.map(mood => (
+              <button key={mood.id} onClick={() => handleSelectMood(mood.id)}
                 className={cn("rounded-lg border p-2 text-left text-xs transition-colors",
-                  selectedTrack === track.id ? "border-primary bg-primary/10" : "border-border hover:bg-secondary")}>
-                <div className="font-medium">{track.name}</div>
-                <div className="text-[10px] text-muted-foreground">{track.mood} • {track.tempo}</div>
+                  selectedTrack === mood.id ? "border-primary bg-primary/10" : "border-border hover:bg-secondary")}>
+                <div className="font-medium">{mood.name}</div>
+                <div className="text-[10px] text-muted-foreground">{mood.description}</div>
               </button>
             ))}
           </div>
@@ -833,10 +886,10 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
             <span className="text-xs text-muted-foreground">Upload your own audio</span>
             <input type="file" accept="audio/*" className="hidden" onChange={handleCustomMusic} />
           </label>
-          {musicLoading && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...</div>}
+          {musicLoading && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating music...</div>}
           {(selectedTrack || customMusicUrl) && !musicLoading && (
             <div className="flex items-center justify-between">
-              <span className="text-xs text-green-400">♪ {selectedTrack === "custom" ? "Custom" : ROYALTY_FREE_TRACKS.find(t => t.id === selectedTrack)?.name} loaded</span>
+              <span className="text-xs text-green-400">♪ {selectedTrack === "custom" ? "Custom audio" : MUSIC_MOODS.find(m => m.id === selectedTrack)?.name || selectedTrack} ready</span>
               <button onClick={removeMusic} className="text-[10px] text-destructive hover:underline">Remove</button>
             </div>
           )}
