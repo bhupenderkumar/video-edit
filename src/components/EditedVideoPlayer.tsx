@@ -76,7 +76,7 @@ function drawSlide(
     for (let i = 0; i < 200; i++) {
       const x = (Math.sin(i * 17.3 + 0.5) * 0.5 + 0.5) * w;
       const y = (Math.cos(i * 23.7 + 0.3) * 0.5 + 0.5) * h;
-      ctx.fillRect(x, y, 1 + Math.random(), 1 + Math.random());
+      ctx.fillRect(x, y, 1 + ((i * 7 + 3) % 5) / 5, 1 + ((i * 11 + 7) % 5) / 5);
     }
     ctx.strokeStyle = "#5C4033";
     ctx.lineWidth = Math.max(8, w * 0.012);
@@ -234,6 +234,9 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
+  const currentTimeRef = useRef(0);
+  const lastUiSyncRef = useRef(0);
+  const playStartedRef = useRef(false);
 
   const [brightness, setBrightness] = useState(editPlan.effects?.brightness ?? 1.0);
   const [contrast, setContrast] = useState(editPlan.effects?.contrast ?? 1.0);
@@ -332,20 +335,21 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const w = canvas.width, h = canvas.height;
-    const mapped = outTimeToSrcTime(currentTime);
+    const ct = currentTimeRef.current;
+    const mapped = outTimeToSrcTime(ct);
 
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, w, h);
     if (!mapped) return;
 
     if (mapped.phase === "intro" && editPlan.intro_slide) {
-      drawSlide(ctx, editPlan.intro_slide, w, h, currentTime / introDuration);
+      drawSlide(ctx, editPlan.intro_slide, w, h, ct / introDuration);
       return;
     }
     if (mapped.phase === "outro" && editPlan.outro_slide) {
       const last = timeline.current[timeline.current.length - 1];
       const outroStart = last ? last.outEnd : introDuration;
-      drawSlide(ctx, editPlan.outro_slide, w, h, Math.min(1, (currentTime - outroStart) / outroDuration));
+      drawSlide(ctx, editPlan.outro_slide, w, h, Math.min(1, (ct - outroStart) / outroDuration));
       return;
     }
 
@@ -355,7 +359,7 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
 
     const animName = segmentAnimations[mapped.segIndex] || "none";
     const animFn = getAnimation(animName);
-    const segProgress = getSegmentProgress(currentTime, mapped.segIndex);
+    const segProgress = getSegmentProgress(ct, mapped.segIndex);
     const transform = animFn(segProgress, vw, vh, w, h);
     applyAnimTransform(ctx, video, transform, w, h);
 
@@ -370,11 +374,11 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
     }
 
     // Transition
-    const trans = getTransitionAt(currentTime);
+    const trans = getTransitionAt(ct);
     if (trans) drawTransition(ctx, trans.type, trans.progress, w, h);
 
     // Caption
-    const capResult = getCaptionAtTime(currentTime);
+    const capResult = getCaptionAtTime(ct);
     if (capResult) drawCaption(ctx, capResult.caption, w, h, capResult.progress);
 
     // Animation label
@@ -387,11 +391,11 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
     }
-  }, [currentTime, brightness, contrast, saturation, colorGrade,
+  }, [brightness, contrast, saturation, colorGrade,
       editPlan.intro_slide, editPlan.outro_slide, introDuration, outroDuration,
       segmentAnimations, outTimeToSrcTime, getCaptionAtTime, getTransitionAt, getSegmentProgress]);
 
-  // Playback loop
+  // Playback loop — renders directly at 60fps, syncs UI state at ~15fps
   useEffect(() => {
     if (!playing) return;
     const video = videoRef.current;
@@ -401,29 +405,69 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
       if (!video) return;
       const dt = lastTs ? (ts - lastTs) / 1000 : 0;
       lastTs = ts;
-      setCurrentTime(prev => {
-        const next = prev + dt;
-        if (next >= totalDuration) {
-          setPlaying(false);
-          if (bgMusicRef.current) bgMusicRef.current.pause();
-          return totalDuration;
-        }
-        const m = outTimeToSrcTime(next);
-        if (m && m.phase === "video") {
-          if (Math.abs(video.currentTime - m.srcTime) > 0.15) video.currentTime = m.srcTime;
-          if (video.paused) video.play().catch(() => {});
-        } else if (!video.paused) {
-          video.pause();
-        }
-        return next;
-      });
+
+      const next = currentTimeRef.current + dt;
+      if (next >= totalDuration) {
+        currentTimeRef.current = totalDuration;
+        setCurrentTime(totalDuration);
+        setPlaying(false);
+        video.pause();
+        if (bgMusicRef.current) bgMusicRef.current.pause();
+        renderFrame();
+        return;
+      }
+
+      currentTimeRef.current = next;
+
+      // Video sync — direct, not inside state updater
+      const m = outTimeToSrcTime(next);
+      if (m && m.phase === "video") {
+        if (Math.abs(video.currentTime - m.srcTime) > 0.15) video.currentTime = m.srcTime;
+        if (video.paused && playStartedRef.current) video.play().catch(() => {});
+      } else if (!video.paused) {
+        video.pause();
+      }
+
+      // Canvas render — direct, no React cycle
+      renderFrame();
+
+      // Sync UI state at ~15fps (scrubber, time display, phase badge)
+      if (ts - lastUiSyncRef.current > 66) {
+        lastUiSyncRef.current = ts;
+        setCurrentTime(next);
+      }
+
       animFrameRef.current = requestAnimationFrame(tick);
     }
     animFrameRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [playing, totalDuration, outTimeToSrcTime]);
+  }, [playing, totalDuration, outTimeToSrcTime, renderFrame]);
 
   useEffect(() => { renderFrame(); }, [renderFrame]);
+
+  // Auto-select music based on AI suggestion on mount
+  useEffect(() => {
+    if (editPlan.music_suggestion && !selectedTrack) {
+      const mood = editPlan.music_suggestion.mood.toLowerCase();
+      const moodMap: Record<string, string> = {
+        uplifting: "uplifting", happy: "uplifting", cheerful: "fun", playful: "fun",
+        professional: "corporate", corporate: "corporate", inspiring: "corporate",
+        dramatic: "cinematic", cinematic: "cinematic", emotional: "cinematic",
+        relaxed: "chill", calm: "chill", lofi: "chill",
+        festive: "celebration", celebration: "celebration", energetic: "celebration",
+      };
+      const matchId = moodMap[mood] || "uplifting";
+      const track = ROYALTY_FREE_TRACKS.find(t => t.id === matchId);
+      if (track) {
+        setSelectedTrack(track.id);
+        const audio = new Audio(track.url);
+        audio.crossOrigin = "anonymous";
+        audio.volume = musicVolume;
+        audio.loop = true;
+        bgMusicRef.current = audio;
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const video = videoRef.current;
@@ -459,13 +503,21 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
       video.pause();
       if (bgMusicRef.current) bgMusicRef.current.pause();
       setPlaying(false);
+      setCurrentTime(currentTimeRef.current);
     } else {
-      if (currentTime >= totalDuration) {
+      if (currentTimeRef.current >= totalDuration) {
+        currentTimeRef.current = 0;
         setCurrentTime(0);
+        video.currentTime = 0;
         if (bgMusicRef.current) bgMusicRef.current.currentTime = 0;
       }
-      const m = outTimeToSrcTime(currentTime);
-      if (m && m.phase === "video") video.play().catch(() => {});
+      // CRITICAL: Always call video.play() from user gesture for browser autoplay policy.
+      // The RAF loop will pause/resume as needed for intro/outro phases,
+      // but the initial play() must come from a click handler.
+      video.muted = originalMuted;
+      video.volume = originalMuted ? 0 : originalVolume;
+      playStartedRef.current = true;
+      video.play().catch(() => {});
       if (bgMusicRef.current && (selectedTrack || customMusicUrl)) bgMusicRef.current.play().catch(() => {});
       setPlaying(true);
     }
@@ -475,22 +527,25 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
     const video = videoRef.current;
     if (!video) return;
     setPlaying(false);
+    currentTimeRef.current = 0;
     setCurrentTime(0);
     video.pause();
     video.currentTime = 0;
+    playStartedRef.current = false;
     if (bgMusicRef.current) { bgMusicRef.current.pause(); bgMusicRef.current.currentTime = 0; }
-    setTimeout(renderFrame, 50);
+    requestAnimationFrame(() => renderFrame());
   }
 
   function handleSeek(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const newTime = ratio * totalDuration;
+    currentTimeRef.current = newTime;
     setCurrentTime(newTime);
     const video = videoRef.current;
     const m = outTimeToSrcTime(newTime);
     if (video && m && m.phase === "video") video.currentTime = m.srcTime;
-    setTimeout(renderFrame, 50);
+    requestAnimationFrame(() => renderFrame());
   }
 
   function handleSelectTrack(trackId: string) {
@@ -579,7 +634,8 @@ export default function EditedVideoPlayer({ videoSrc, editPlan, projectId, proje
 
   return (
     <div className="space-y-3">
-      <video ref={videoRef} src={videoSrc} playsInline preload="auto" crossOrigin="anonymous" className="hidden" />
+      <video ref={videoRef} src={videoSrc} playsInline preload="auto" crossOrigin="anonymous"
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none", zIndex: -1 }} />
 
       {/* Canvas */}
       <div className="relative overflow-hidden rounded-lg border border-border bg-black">
